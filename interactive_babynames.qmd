@@ -1,0 +1,66 @@
+---
+title: "Top babynames"
+format: html
+server: shiny
+---
+
+In this project we aim to visualize the trends of the most frequently used babynames from 1880 to 2017 in the United States. We do this by:
+
+- Understanding the different columns of the data set
+- Find the top 10 most frequently used baby names in the data for:
+  - girls
+  - boys
+- Plot the yearly trend of the top 10 baby names 
+
+![](https://cdn.pixabay.com/photo/2016/10/02/06/27/baby-1709013_1280.jpg){fig-align="right" width=400}
+
+The first ten lines of the babynames dataset looks like:
+
+```{r}
+library(knitr)
+library(babynames)
+head(babynames) |> kable()
+```
+
+You can play around with the number of baby names or that sex here:
+
+```{r}
+radioButtons("sex", "sex:", c("M", "F"))
+sliderInput("n_names", "Number of names:", min = 1, max = 12,
+            value = 10)
+plotOutput("babyplot")
+```
+
+```{r}
+#| context: server
+library(dplyr)
+library(babynames)
+library(ggplot2)
+
+get_most_frequent <- function(babynames, select_sex, from = 1950) {
+  most_freq <- babynames |>
+    filter(sex == select_sex, year > from) |>
+    group_by(name) |>
+    summarise(average = mean(prop)) |>
+    arrange(desc(average))
+  return(most_freq)
+}
+
+plot_top <- function(x, babynames, select_sex, top = 10, from = 1950) {
+  topx <- x$name[1:top]
+  
+  p <- babynames |>
+    filter(name %in% topx, sex == select_sex, year > from) |>
+    ggplot(aes(x = year, y = prop, color = name)) +
+    geom_line() +
+    scale_color_brewer(palette = "Paired") +
+    theme_classic()
+  
+  return(p)
+}
+
+output$babyplot <- renderPlot({
+get_most_frequent(babynames, select_sex = input$sex) |>
+  plot_top(babynames, select_sex = input$sex, top = input$n_names)
+})
+```
